@@ -1,0 +1,15 @@
+master_node
+slave_node
+*.o
+build/
+
+# VS Code özel ayarları (Takım çalışması yapmıyorsan gizli kalması iyidir)
+.vscode/
+
+# Clangd ve Derleme Yardımcıları
+.clangd/
+compile_commands.json
+.cache/
+
+# İşletim sistemi kalıntıları
+.DS_Store
