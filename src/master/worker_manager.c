@@ -3,17 +3,24 @@
 #include "../../include/common/net.h"
 
 static struct worker workers[WORKER_COUNT];
+static char* workerips[WORKER_COUNT] = {"192.168.85.233"};
 
 void init_workers() {
+	int n;
 	memset(workers, 0, sizeof(workers));
-	struct worker* w = &workers[0];
 
-	memcpy(w->ip, wip1, 16);
-	memcpy(w->port, WORKERPORT, 5);
-	sfd wfd = connect_to_host(w->ip, WORKERPORT);
-	if (wfd == FAIL) exit(EXIT_FAILURE);
-
-	w->sockfd = wfd;
+	for (n = 0; n < WORKER_COUNT; ++n) {
+		struct worker* w = &workers[n];
+		memcpy(w->ip, workerips[n], 16);
+		memcpy(w->port, WORKERPORT, 5);
+		sfd wfd = connect_to_host(w->ip, WORKERPORT);
+		// if (wfd == FAIL) exit(EXIT_FAILURE);
+		if (wfd == FAIL) {
+			workers[n].sockfd = -1;
+			continue;
+		}
+		w->sockfd = wfd;
+	}
 }
 
 struct worker* get_target_worker() { return &workers[0]; }

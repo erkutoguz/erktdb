@@ -5,7 +5,8 @@
 #include "../../include/common/protocol.h"
 
 #define WORKER_COUNT 1
-#define wip1 "192.168.207.233"
+#define wip1 "192.168.85.233"
+#define wip2 "127.0.0.1"
 
 struct worker {
 	sfd sockfd;	   // Worker ile konuşulan soket

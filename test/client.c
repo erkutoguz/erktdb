@@ -15,7 +15,7 @@ int main() {
 
 	struct hdr h;
 	h.magic = 0x0000;
-	h.op = OP_POST;
+	h.op = OP_GET;
 	h.keylen = (i32)4;
 	h.vallen = (i32)6;
 

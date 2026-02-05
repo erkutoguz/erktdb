@@ -51,6 +51,7 @@ void handle_client_message(sfd client_fd) {
 
 			conn->workerfd = w->sockfd;
 			struct pay p;
+
 			p.key = conn->payload_buf;
 			p.val = conn->payload_buf + conn->header.keylen;
 

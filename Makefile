@@ -36,4 +36,7 @@ clean:
 	@rm -rf $(OBJ_DIR) $(TARGET_MASTER)
 	@echo "Clean done."
 
+client:
+	$(CC) $(CFLAGS) ./test/client.c -o ./client -lm "./src/common/net.c"
+
 .PHONY: all clean directories
