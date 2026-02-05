@@ -15,14 +15,14 @@ int main() {
 
 	struct hdr h;
 	h.magic = 0x0000;
-	h.op = OP_GET;
+	h.op = OP_POST;
 	h.keylen = (i32)4;
 	h.vallen = (i32)6;
 
 	struct pay p;
 	// Malloc ile uğraşmadan direkt string literal verebilirsin test için
-	p.key = "name";
-	p.val = "zeynep";
+	p.key = "asdf";
+	p.val = "tugrul";
 
 	i8 buf[12];
 	i8 pbuf[10];  // 4 + 5

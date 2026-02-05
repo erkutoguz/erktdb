@@ -1,5 +1,7 @@
 #include "../../include/master/request_handler.h"
 
+#include "../../include/common/utils.h"
+
 void handle_client_message(sfd client_fd) {
 	struct connection *conn = get_connection(client_fd);
 	if (!conn) return;
@@ -47,7 +49,8 @@ void handle_client_message(sfd client_fd) {
 		conn->payload_bytes_read += n;
 
 		if (conn->payload_bytes_read == conn->payload_size) {
-			struct worker *w = get_target_worker();
+			const char *k = safestrgen(conn->payload_buf, conn->header.keylen);
+			struct worker *w = get_target_worker(k);
 
 			conn->workerfd = w->sockfd;
 			struct pay p;

@@ -17,7 +17,6 @@ struct node {
 
 void init_map();
 
-char *safestrgen(char *str, i32 len);
 char *get(const char *key);
 STAT post(const char *key, const i32 keylen, const char *val, const i32 vallen);
 

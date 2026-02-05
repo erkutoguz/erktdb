@@ -1,5 +1,6 @@
 #include "../../include/worker/master_request_handler.h"
 
+#include "../../include/common/utils.h"
 #include "../../include/worker/storage.h"
 
 void handle_master_message(sfd fd) {

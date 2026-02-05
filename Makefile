@@ -1,42 +1,76 @@
+# Compiler ve Bayraklar
 CC = gcc
+CFLAGS = -Wall -Wextra -g -Iinclude
 
-CFLAGS = -Wall -Wextra -g -I./include
-
-TARGET_MASTER = master_node
-
+# Klasörler
 SRC_DIR = src
-OBJ_DIR = build
-BIN_DIR = bin
+BUILD_DIR = build
 
+# ------------------------------------------------
+# ÇIKTI DOSYALARI (Root dizinde kalacaklar)
+# ------------------------------------------------
+MASTER_BIN = master_node
+WORKER_BIN = worker_node
+CLIENT_BIN = client_app
 
-SRCS_COMMON = $(wildcard $(SRC_DIR)/common/*.c)
-SRCS_MASTER = $(wildcard $(SRC_DIR)/master/*.c)
+# ------------------------------------------------
+# KAYNAK DOSYALAR
+# ------------------------------------------------
+COMMON_SRC = src/common/connection.c src/common/net.c src/common/utils.c
+MASTER_SRC = src/master/main.c src/master/request_handler.c src/master/worker_manager.c
+WORKER_SRC = src/worker/main.c src/worker/master_request_handler.c src/worker/storage.c
+CLIENT_SRC = test/client.c
 
-OBJS_COMMON = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS_COMMON))
-OBJS_MASTER = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS_MASTER))
+# ------------------------------------------------
+# OBJECT DOSYALARI (Hepsi build/ altına gidecek)
+# ------------------------------------------------
+# Mantık: src/master/main.c  ->  build/src/master/main.o
+COMMON_OBJ = $(COMMON_SRC:%.c=$(BUILD_DIR)/%.o)
+MASTER_OBJ = $(MASTER_SRC:%.c=$(BUILD_DIR)/%.o)
+WORKER_OBJ = $(WORKER_SRC:%.c=$(BUILD_DIR)/%.o)
+CLIENT_OBJ = $(CLIENT_SRC:%.c=$(BUILD_DIR)/%.o)
 
-all: directories $(TARGET_MASTER)
+# Varsayılan hedef
+all: master worker client
 
+# ----------------------------------------
+# LINKING (Bağlama Aşaması - Binary Üretimi)
+# Çıktılar (-o) direkt ismin kendisine (root'a) gidiyor.
+# ----------------------------------------
 
-$(TARGET_MASTER): $(OBJS_COMMON) $(OBJS_MASTER)
-	@echo "Linking Master Node..."
-	$(CC) $(CFLAGS) $^ -o $@
-	@echo "Basariyla olusturuldu: $@"
+master: $(MASTER_OBJ) $(COMMON_OBJ)
+	@echo "🔗 Master Node kök dizine bağlanıyor..."
+	$(CC) $(CFLAGS) -o $(MASTER_BIN) $(MASTER_OBJ) $(COMMON_OBJ)
+	@echo "✅ Master Node Hazır: ./$(MASTER_BIN)"
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+worker: $(WORKER_OBJ) $(COMMON_OBJ)
+	@echo "🔗 Worker Node kök dizine bağlanıyor..."
+	$(CC) $(CFLAGS) -o $(WORKER_BIN) $(WORKER_OBJ) $(COMMON_OBJ)
+	@echo "✅ Worker Node Hazır: ./$(WORKER_BIN)"
+
+client: $(CLIENT_OBJ) $(COMMON_OBJ)
+	@echo "🔗 Test Client kök dizine bağlanıyor..."
+	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_OBJ) $(COMMON_OBJ)
+	@echo "✅ Client Hazır: ./$(CLIENT_BIN)"
+
+# ----------------------------------------
+# COMPILING (Derleme Aşaması - Object Üretimi)
+# Sadece burası build/ klasörünü kullanır
+# ----------------------------------------
+
+$(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@echo "Compiling $<..."
+	@echo "🔨 Derleniyor: $< -> $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-directories:
-	@mkdir -p $(OBJ_DIR)
-
+# ----------------------------------------
+# TEMİZLİK
+# ----------------------------------------
 clean:
-	@echo "Cleaning up..."
-	@rm -rf $(OBJ_DIR) $(TARGET_MASTER)
-	@echo "Clean done."
+	@echo "🧹 Temizlik yapılıyor..."
+	# Sadece build klasörünü ve kökteki exe'leri sil
+	rm -rf $(BUILD_DIR)
+	rm -f $(MASTER_BIN) $(WORKER_BIN) $(CLIENT_BIN)
+	@echo "✨ build/ klasörü ve binaryler temizlendi."
 
-client:
-	$(CC) $(CFLAGS) ./test/client.c -o ./client -lm "./src/common/net.c"
-
-.PHONY: all clean directories
+.PHONY: all master

@@ -4,7 +4,7 @@
 #include "../../include/common/net.h"
 #include "../../include/common/protocol.h"
 
-#define WORKER_COUNT 1
+#define WORKER_COUNT 2
 #define wip1 "192.168.85.233"
 #define wip2 "127.0.0.1"
 
@@ -28,7 +28,7 @@ void init_workers();
  * Yük dengeleme (Load Balancing) burada yapılır.
  * Örn: hash(key) % WORKER_COUNT
  */
-struct worker* get_target_worker();
+struct worker* get_target_worker(const char* key);
 
 /**
  * Bir Worker'ın soket numarasını (fd) verince, onun struct yapısını döner.

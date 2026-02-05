@@ -1,9 +1,10 @@
 #include "../../include/master/worker_manager.h"
 
 #include "../../include/common/net.h"
+#include "../../include/common/utils.h"
 
 static struct worker workers[WORKER_COUNT];
-static char* workerips[WORKER_COUNT] = {"192.168.85.233"};
+static char* workerips[WORKER_COUNT] = {"192.168.85.233", "127.0.0.1"};
 
 void init_workers() {
 	int n;
@@ -23,7 +24,10 @@ void init_workers() {
 	}
 }
 
-struct worker* get_target_worker() { return &workers[0]; }
+struct worker* get_target_worker(const char* key) {
+	i64 idx = hash(key) % WORKER_COUNT;
+	return &workers[idx];
+}
 
 /**
  * Bir Worker'ın soket numarasını (fd) verince, onun struct yapısını döner.

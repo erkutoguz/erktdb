@@ -1,20 +1,10 @@
 #include "../../include/worker/storage.h"
 
-#include <string.h>
-
 #include "../../include/common/utils.h"
 
 static struct node map[MAPSIZE];
 
 void init_map() { memset(map, 0, sizeof(map)); }
-
-char *safestrgen(char *str, i32 len) {
-	char *g = malloc(len + 1);
-	if (!g) return NULL;
-	memcpy(g, str, len);
-	g[len] = '\0';
-	return g;
-}
 
 char *get(const char *key) {
 	i64 idx = hash(key) % MAPSIZE;
@@ -36,22 +26,25 @@ char *get(const char *key) {
 STAT post(const char *key, const i32 keylen, const char *val, const i32 vallen) {
 	i64 idx = hash(key) % MAPSIZE;
 
-	struct node *n = &map[idx];
+	struct node *curr = &map[idx];
 
-	if (n->key == NULL) {
-		n->key = safestrgen(key, keylen);
-		n->val = safestrgen(val, vallen);
-		n->next = NULL;
+	if (curr->key == NULL) {
+		curr->key = safestrgen(key, keylen);
+		curr->val = safestrgen(val, vallen);
+		curr->next = NULL;
 		return OK;
 	}
 
-	while (n->next != NULL) {
-		if (strcmp(n->key, key) == 0) {
-			free(n->val);
-			n->val = safestrgen(val, vallen);
+	struct node *prev = curr;
+
+	while (curr != NULL) {
+		if (strcmp(curr->key, key) == 0) {
+			free(curr->val);
+			curr->val = safestrgen(val, vallen);
 			return OK;
 		}
-		n = n->next;
+		prev = curr;
+		curr = curr->next;
 	}
 
 	struct node *new = malloc(sizeof(struct node));
@@ -61,7 +54,9 @@ STAT post(const char *key, const i32 keylen, const char *val, const i32 vallen) 
 	new->val = safestrgen(val, vallen);
 	new->next = NULL;
 
-	n->next = new;
+	if (prev != NULL) {
+		prev->next = new;
+	}
 
 	return OK;
 }
