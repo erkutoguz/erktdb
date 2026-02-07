@@ -13,10 +13,10 @@ struct connection {
 	sfd workerfd;
 	conn_state state;
 
-	i8 header_buf[12];
+	i8 header_buf[sizeof(struct prihdr)];
 	i32 header_bytes_read;
 
-	struct hdr header;
+	struct prihdr header;
 	i8* payload_buf;
 	i32 payload_size;
 	i32 payload_bytes_read;

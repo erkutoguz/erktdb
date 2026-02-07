@@ -2,6 +2,8 @@
 
 #include "../../include/common/utils.h"
 
+i64 uuid = 0;
+
 void handle_client_message(sfd client_fd) {
 	struct connection *conn = get_connection(client_fd);
 	if (!conn) return;
@@ -22,9 +24,9 @@ void handle_client_message(sfd client_fd) {
 		conn->header_bytes_read += n;
 
 		if (conn->header_bytes_read == 12) {
-			deserialize_hdr(&conn->header, conn->header_buf);
+			deserialize_pubhdr(&conn->header.pub, conn->header_buf);
 
-			conn->payload_size = conn->header.keylen + conn->header.vallen;
+			conn->payload_size = conn->header.pub.keylen + conn->header.pub.vallen;
 			conn->payload_buf = (i8 *)malloc(conn->payload_size);
 			conn->payload_bytes_read = 0;
 
@@ -49,19 +51,27 @@ void handle_client_message(sfd client_fd) {
 		conn->payload_bytes_read += n;
 
 		if (conn->payload_bytes_read == conn->payload_size) {
-			const char *k = safestrgen(conn->payload_buf, conn->header.keylen);
+			const char *k = safestrgen(conn->payload_buf, conn->header.pub.keylen);
 			struct worker *w = get_target_worker(k);
 
 			conn->workerfd = w->sockfd;
 			struct pay p;
 
 			p.key = conn->payload_buf;
-			p.val = conn->payload_buf + conn->header.keylen;
+			p.val = conn->payload_buf + conn->header.pub.keylen;
 
 			printf("data completely taken. key: %s -> related worker: %d\n", p.key, w->sockfd);
 
-			send_hdr(w->sockfd, &conn->header);
-			send_pay(w->sockfd, &p, conn->header.keylen, conn->header.vallen);
+			i8 buf[24];
+
+			struct prihdr pri;
+			pri.pub = conn->header.pub;
+			pri.uuid = uuid++;
+			pri.client_fd = client_fd;
+			serialize_prihdr(&pri, buf);
+
+			send_hdr(w->sockfd, buf, 24);
+			send_pay(w->sockfd, &p, conn->header.pub.keylen, conn->header.pub.vallen);
 
 			close(client_fd);
 			free_connection(client_fd);

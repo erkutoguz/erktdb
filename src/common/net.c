@@ -1,6 +1,6 @@
 #include "../../include/common/net.h"
 
-void serialize_hdr(const struct hdr *h, i8 *buf) {
+void serialize_pubhdr(const struct pubhdr *h, i8 *buf) {
 	int offset = 0;
 	buf[offset++] = (h->magic >> 8) & 0xff;
 	buf[offset++] = h->magic & 0xff;
@@ -19,7 +19,7 @@ void serialize_hdr(const struct hdr *h, i8 *buf) {
 	buf[offset++] = h->vallen & 0xff;
 }
 
-void deserialize_hdr(struct hdr *h, const i8 *buf) {
+void deserialize_pubhdr(struct pubhdr *h, const i8 *buf) {
 	h->magic = (buf[0] << 8) | (buf[1]);
 
 	h->op = buf[2];
@@ -27,6 +27,52 @@ void deserialize_hdr(struct hdr *h, const i8 *buf) {
 
 	h->keylen = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | (buf[7]);
 	h->vallen = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
+}
+
+void serialize_prihdr(const struct prihdr *h, i8 *buf) {
+	int offset = 0;
+	buf[offset++] = (h->pub.magic >> 8) & 0xff;
+	buf[offset++] = h->pub.magic & 0xff;
+
+	buf[offset++] = h->pub.op & 0xff;
+	buf[offset++] = 0x00;
+
+	buf[offset++] = (h->pub.keylen >> 24) & 0xff;
+	buf[offset++] = (h->pub.keylen >> 16) & 0xff;
+	buf[offset++] = (h->pub.keylen >> 8) & 0xff;
+	buf[offset++] = h->pub.keylen & 0xff;
+
+	buf[offset++] = (h->pub.vallen >> 24) & 0xff;
+	buf[offset++] = (h->pub.vallen >> 16) & 0xff;
+	buf[offset++] = (h->pub.vallen >> 8) & 0xff;
+	buf[offset++] = h->pub.vallen & 0xff;
+
+	buf[offset++] = (h->client_fd >> 24) & 0xff;
+	buf[offset++] = (h->client_fd >> 16) & 0xff;
+	buf[offset++] = (h->client_fd >> 8) & 0xff;
+	buf[offset++] = (h->client_fd) & 0xff;
+
+	buf[offset++] = (h->uuid >> 56) & 0xff;
+	buf[offset++] = (h->uuid >> 48) & 0xff;
+	buf[offset++] = (h->uuid >> 40) & 0xff;
+	buf[offset++] = (h->uuid >> 32) & 0xff;
+	buf[offset++] = (h->uuid >> 24) & 0xff;
+	buf[offset++] = (h->uuid >> 16) & 0xff;
+	buf[offset++] = (h->uuid >> 8) & 0xff;
+	buf[offset++] = h->uuid & 0xff;
+}
+
+void deserialize_prihdr(struct prihdr *h, const i8 *buf) {
+	h->pub.magic = (buf[0] << 8) | (buf[1]);
+
+	h->pub.op = buf[2];
+	h->pub.pad = 0;
+
+	h->pub.keylen = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | (buf[7]);
+	h->pub.vallen = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
+
+	h->client_fd = (buf[12] << 24) | (buf[13] << 16) | (buf[14] << 8) | buf[15];
+	h->uuid = ((i64)buf[16] << 56) | ((i64)buf[17] << 48) | ((i64)buf[18] << 40) | ((i64)buf[19] << 32) | (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | (buf[23]);
 }
 
 void serialize_pay(const struct pay *p, i8 *buf, i32 keylen, i32 vallen) {
@@ -143,12 +189,7 @@ sfd accept_conn(int listener, struct sockaddr *addr) {
 	return connfd;
 }
 
-STAT send_hdr(sfd dest, struct hdr *hdr) {
-	i8 buf[12];
-
-	serialize_hdr(hdr, buf);
-	return send_all(dest, buf, 12) == OK ? OK : FAIL;
-}
+STAT send_hdr(sfd dest, i8 *buf, i16 size) { return send_all(dest, buf, size) == OK ? OK : FAIL; }
 
 STAT send_pay(sfd dest, struct pay *pay, i32 keylen, i32 vallen) {
 	i8 *buf;

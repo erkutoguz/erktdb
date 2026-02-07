@@ -23,14 +23,24 @@
 #define MASTERPORT "1911"
 
 /**
- * serialize hdr struct to buf
+ * serialize pubhdr struct to buf
  */
-void serialize_hdr(const struct hdr *h, i8 *buf);
+void serialize_pubhdr(const struct pubhdr *h, i8 *buf);
 
 /**
- * deserialize buf to hdr struct
+ * deserialize buf to pubhdr struct
  */
-void deserialize_hdr(struct hdr *h, const i8 *buf);
+void deserialize_pubhdr(struct pubhdr *h, const i8 *buf);
+
+/**
+ * serialize prihdr struct to buf
+ */
+void serialize_prihdr(const struct prihdr *h, i8 *buf);
+
+/**
+ * deserialize buf to prihdr struct
+ */
+void deserialize_prihdr(struct prihdr *h, const i8 *buf);
 
 /**
  * serialize pay struct to buf
@@ -60,11 +70,10 @@ sfd accept_conn(int listener, struct sockaddr *addr);
 sfd connect_to_host(char *hostname, char *port);
 
 /**
- * send header struct to dest sock
- * pass hdr* to send
+ * send i8 *buff to dest
  * return type status to check if it is success
  */
-STAT send_hdr(sfd dest, struct hdr *hdr);
+STAT send_hdr(sfd dest, i8 *buf, i16 size);
 
 /**
  * send payload struct to dest sock

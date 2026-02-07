@@ -13,7 +13,7 @@ int main() {
 
 	connect(fd, addr->ai_addr, addr->ai_addrlen);
 
-	struct hdr h;
+	struct pubhdr h;
 	h.magic = 0x0000;
 	h.op = OP_POST;
 	h.keylen = (i32)4;
@@ -37,7 +37,7 @@ int main() {
 	send_all(fd, pbuf, 10);
 
 	printf("Veri gönderildi, kapanıyor...\n");
-	printf("hdr size %lu\n", sizeof(struct hdr));
+	printf("hdr size %lu\n", sizeof(struct pubhdr));
 	close(fd);
 	freeaddrinfo(addr);
 	return 0;
