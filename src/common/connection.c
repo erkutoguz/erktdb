@@ -25,27 +25,33 @@ struct connection* get_connection(sfd fd) {
 	return &conns[fd];
 }
 
-void clear_connection(sfd fd) {
-	struct connection* c = &conns[fd];
+void reset_connection(sfd fd) {
+	struct connection* conn = get_connection(fd);
+	if (!conn) return;
 
-	c->state = CONN_WAIT_HEADER;
-	c->header_bytes_read = 0;
-	c->payload_bytes_read = 0;
-	c->payload_size = 0;
+	if (conn->bodybuf) {
+		free(conn->bodybuf);
+		conn->bodybuf = NULL;
+	}
+	conn->header_bytes_read = 0;
+	conn->body_bytes_read = 0;
+	conn->body_size = 0;
 
-	memset(c->header_buf, 0, 12);
-
-	free(c->payload_buf);
-
-	c->payload_buf = NULL;
+	conn->state = CONN_WAIT_HEADER;
 }
 
 void free_connection(sfd fd) {
-	struct connection* c = &conns[fd];
-	if (c->payload_buf) {
-		free(c->payload_buf);
-		c->payload_buf = NULL;
+	struct connection* conn = get_connection(fd);
+	if (!conn) return;
+
+	if (conn->fd != -1) {
+		close(conn->fd);
 	}
-	c->fd = -1;
-	c->state = CONN_IDLE;
+
+	if (conn->bodybuf) {
+		free(conn->bodybuf);
+	}
+
+	memset(conn, 0, sizeof(struct connection));
+	conn->fd = -1;
 }

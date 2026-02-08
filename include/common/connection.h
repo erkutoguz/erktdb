@@ -7,46 +7,36 @@
 #define MAX_CLIENTS 1024
 
 typedef enum { CONN_WAIT_HEADER, CONN_WAIT_PAYLOAD, CONN_IDLE } conn_state;
+typedef enum { CONN_CLI, CONN_WOR } conn_type;
 
 struct connection {
 	sfd fd;
-	sfd workerfd;
+	conn_type type;
 	conn_state state;
 
 	i8 header_buf[sizeof(struct prihdr)];
 	i32 header_bytes_read;
+	i32 expected_hdr_size;
 
-	struct prihdr header;
-	i8* payload_buf;
-	i32 payload_size;
-	i32 payload_bytes_read;
+	union {
+		struct pubhdr client_req;  // 12 cli -> master
+		struct prihdr master_req;  // 24 master -> worker
+		struct rethdr worker_res;  // 20 worker -> master
+	} info;
+
+	i8* bodybuf;
+	i32 body_bytes_read;
+	i32 body_size;
 };
 
-/**
- * Global connection dizisini sıfırlar (memset).
- * Main'in en başında çağrılır.
- */
 void init_connections();
 
-/**
- * Yeni bağlanan bir client (accept_conn sonrası) için boş bir slot bulur.
- * fd'yi kaydeder ve state'i WAIT_HEADER yapar.
- * Hata durumunda NULL döner.
- */
 struct connection* create_connection(sfd fd);
 
-/**
- * Soket numarası (fd) verilen bağlantının struct pointer'ını getirir.
- * O(1) hızında erişim için genelde connections[fd] kullanılır.
- */
 struct connection* get_connection(sfd fd);
 
-void clear_connection(sfd fd);
+void reset_connection(sfd fd);
 
-/**
- * Client koptuğunda çağrılır.
- * Varsa payload_buf'ı free eder ve slotu temizler.
- */
 void free_connection(sfd fd);
 
 #endif

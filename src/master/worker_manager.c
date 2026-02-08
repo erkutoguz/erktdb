@@ -1,10 +1,11 @@
 #include "../../include/master/worker_manager.h"
 
+#include "../../include/common/connection.h"
 #include "../../include/common/net.h"
 #include "../../include/common/utils.h"
 
 static struct worker workers[WORKER_COUNT];
-static char* workerips[WORKER_COUNT] = {"192.168.85.233", "127.0.0.1"};
+static char* workerips[WORKER_COUNT] = {"127.0.0.1"};
 
 void init_workers() {
 	int n;
@@ -15,12 +16,22 @@ void init_workers() {
 		memcpy(w->ip, workerips[n], 16);
 		memcpy(w->port, WORKERPORT, 5);
 		sfd wfd = connect_to_host(w->ip, WORKERPORT);
-		// if (wfd == FAIL) exit(EXIT_FAILURE);
+
 		if (wfd == FAIL) {
 			workers[n].sockfd = -1;
 			continue;
 		}
 		w->sockfd = wfd;
+		struct connection* c = create_connection(wfd);
+		if (c) {
+			c->type = CONN_WOR;
+			c->state = CONN_WAIT_HEADER;
+			c->expected_hdr_size = sizeof(struct rethdr);
+		} else {
+			perror("Worker create_connection failed");
+			// burada worker oluşturulazmazsa en başta kapatbiliriz TODO baklılacak
+			exit(1);
+		}
 	}
 }
 
@@ -29,12 +40,18 @@ struct worker* get_target_worker(const char* key) {
 	return &workers[idx];
 }
 
-/**
- * Bir Worker'ın soket numarasını (fd) verince, onun struct yapısını döner.
- * Worker'dan cevap geldiğinde "Bu cevabı kim yolladı?" demek için kullanılır.
- */
+struct worker* get_worker_at_index(int index) {
+	if (index < 0 || index >= WORKER_COUNT) {
+		return NULL;
+	}
+	return &workers[index];
+}
+
 struct worker* get_worker_by_fd(sfd fd) {
-	if (fd < 0 || fd > WORKER_COUNT) return NULL;
-	if (workers[fd].sockfd == -1) return NULL;
-	return &workers[fd];
+	for (int i = 0; i < WORKER_COUNT; ++i) {
+		if (workers[i].sockfd == fd) {
+			return &workers[i];
+		}
+	}
+	return NULL;
 }

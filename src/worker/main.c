@@ -65,7 +65,6 @@ int main() {
 
 			struct connection *c = get_connection(current_fd);
 			if (c) {
-				// printf("tamam conn var %d\n", c->payload_size);
 				handle_master_message(current_fd);
 			} else {
 				close(current_fd);

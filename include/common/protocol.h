@@ -25,4 +25,12 @@ struct pay {
 	i8 *val;
 };
 
+struct rethdr {
+	i64 uuid;	// 8
+	sfd client_fd;	// 4
+	i32 msglen;	// 4
+	STAT status;	// 4
+} __attribute__((packed));
+;
+
 #endif

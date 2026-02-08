@@ -15,22 +15,19 @@ int main() {
 
 	struct pubhdr h;
 	h.magic = 0x0000;
-	h.op = OP_POST;
+	h.op = OP_GET;
 	h.keylen = (i32)4;
 	h.vallen = (i32)6;
 
 	struct pay p;
-	// Malloc ile uğraşmadan direkt string literal verebilirsin test için
 	p.key = "asdf";
 	p.val = "tugrul";
 
 	i8 buf[12];
 	i8 pbuf[10];  // 4 + 5
 
-	serialize_hdr(&h, buf);
+	serialize_pubhdr(&h, buf);
 
-	// serialize_pay zaten p.key ve p.val'i okuyup pbuf'a yazar.
-	// memcpy yapmana gerek yok.
 	serialize_pay(&p, pbuf, h.keylen, h.vallen);
 
 	send_all(fd, buf, 12);
@@ -38,7 +35,12 @@ int main() {
 
 	printf("Veri gönderildi, kapanıyor...\n");
 	printf("hdr size %lu\n", sizeof(struct pubhdr));
-	close(fd);
+	char response_buf[256];
+
+	int n = recv(fd, response_buf, sizeof(response_buf), 0);
+	if (n > 0) {
+		printf("Cevap geldi!\n");
+	}
 	freeaddrinfo(addr);
 	return 0;
 }

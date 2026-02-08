@@ -7,15 +7,8 @@
 #include "../../include/master/request_handler.h"
 #include "../../include/master/worker_manager.h"
 
-// TODO: worker tarafında recv ve connection mantığını kur.
-// sonra veriyi al ve worker içindeki storage.c içindeki kurduğun linkedlist yapısına yazdır.
-// yazdıktan sonra master'a okey diye mesaj yolla.
-// master ok mesajını aldığında client'e gönderecek.
-//
 // worker connection kapandığında master kapanmamalı onu da kurmalıyız.
 // eğer hiç bir worker kalmaz ise sistem client'e doğrudan hata mesajı yollasın kapanmasın
-// bunun içinde returnval şeklinde bir enum da kurmak gerekiyr
-// aklıma gelenler OK, FAIL, SERV_ERROR şeklinde
 
 int main() {
 	struct epoll_event events[MAXEVENTS], ev;
@@ -51,6 +44,20 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
+	for (int i = 0; i < WORKER_COUNT; ++i) {
+		struct worker *w = get_worker_at_index(i);
+
+		if (w && w->sockfd != -1) {
+			struct epoll_event ev;
+			ev.events = EPOLLIN;
+			ev.data.fd = w->sockfd;
+			if (epoll_ctl(epollfd, EPOLL_CTL_ADD, w->sockfd, &ev) == -1) {
+				perror("epoll_ctl: worker socket");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+
 	for (;;) {
 		nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
 		if (nfds == -1) {
@@ -82,8 +89,7 @@ int main() {
 
 			struct worker *w = get_worker_by_fd(current_fd);
 			if (w) {
-				printf("workerdan geldi\n");
-				// handle_worker_message(current_fd);
+				handle_worker_message(current_fd);
 				continue;
 			}
 

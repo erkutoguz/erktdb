@@ -19,7 +19,7 @@
 
 #define MAXEVENTS 128
 #define MAXCONN 1024
-#define WORKERPORT "2607"
+#define WORKERPORT "1999"
 #define MASTERPORT "1911"
 
 /**
@@ -51,6 +51,10 @@ void serialize_pay(const struct pay *p, i8 *buf, i32 keylen, i32 vallen);
  * deserialize buf to pay struct
  */
 void deserialize_pay(struct pay *p, const i8 *buf, i32 keylen, i32 vallen);
+
+void serialize_rethdr(const struct rethdr *h, i8 *buf);
+
+void deserialize_rethdr(struct rethdr *h, const i8 *buf);
 
 /**
  * accept port parameter return listener fd

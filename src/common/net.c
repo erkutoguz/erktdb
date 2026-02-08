@@ -35,7 +35,7 @@ void serialize_prihdr(const struct prihdr *h, i8 *buf) {
 	buf[offset++] = h->pub.magic & 0xff;
 
 	buf[offset++] = h->pub.op & 0xff;
-	buf[offset++] = 0x00;
+	buf[offset++] = 0x00 & 0xff;
 
 	buf[offset++] = (h->pub.keylen >> 24) & 0xff;
 	buf[offset++] = (h->pub.keylen >> 16) & 0xff;
@@ -97,6 +97,42 @@ void deserialize_pay(struct pay *p, const i8 *buf, i32 keylen, i32 vallen) {
 	for (i = 0; i < vallen; ++i) {
 		p->val[i] = buf[offset++];
 	}
+}
+
+void serialize_rethdr(const struct rethdr *h, i8 *buf) {
+	i64 offset = 0;
+	buf[offset++] = (h->uuid >> 56) & 0xff;
+	buf[offset++] = (h->uuid >> 48) & 0xff;
+	buf[offset++] = (h->uuid >> 40) & 0xff;
+	buf[offset++] = (h->uuid >> 32) & 0xff;
+	buf[offset++] = (h->uuid >> 24) & 0xff;
+	buf[offset++] = (h->uuid >> 16) & 0xff;
+	buf[offset++] = (h->uuid >> 8) & 0xff;
+	buf[offset++] = (h->uuid) & 0xff;
+
+	buf[offset++] = (h->client_fd >> 24) & 0xff;
+	buf[offset++] = (h->client_fd >> 16) & 0xff;
+	buf[offset++] = (h->client_fd >> 8) & 0xff;
+	buf[offset++] = (h->client_fd) & 0xff;
+
+	buf[offset++] = (h->msglen >> 24) & 0xff;
+	buf[offset++] = (h->msglen >> 16) & 0xff;
+	buf[offset++] = (h->msglen >> 8) & 0xff;
+	buf[offset++] = (h->msglen) & 0xff;
+
+	buf[offset++] = (h->status >> 24) & 0xff;
+	buf[offset++] = (h->status >> 16) & 0xff;
+	buf[offset++] = (h->status >> 8) & 0xff;
+	buf[offset++] = (h->status) & 0xff;
+}
+
+void deserialize_rethdr(struct rethdr *h, const i8 *buf) {
+	h->uuid =
+	    ((i64)buf[0] << 56) | ((i64)buf[1] << 48) | ((i64)buf[2] << 40) | ((i64)buf[3] << 32) | ((i64)buf[4] << 24) | ((i64)buf[5] << 16) | ((i64)buf[6] << 8) | ((i64)buf[7]);
+
+	h->client_fd = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | (buf[11]);
+	h->msglen = (buf[12] << 24) | (buf[13] << 16) | (buf[14] << 8) | (buf[15]);
+	h->status = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
 }
 
 sfd start_listen(char *port) {
