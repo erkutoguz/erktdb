@@ -20,7 +20,7 @@
 #define MAXEVENTS 128
 #define MAXCONN 1024
 #define WORKERPORT "1999"
-#define MASTERPORT "1911"
+#define MASTERPORT "45419"
 
 /**
  * serialize pubhdr struct to buf
@@ -90,6 +90,8 @@ STAT send_pay(sfd dest, struct pay *pay, i32 keylen, i32 vallen);
  * returns OK if it is success
  */
 STAT send_all(sfd to, i8 *src, i64 size);
+
+STAT send_err_msg(sfd to, i8 *msg, i32 size);
 
 /**
  * accept from sfd, and dest buffer in i8* type and total size in bytes

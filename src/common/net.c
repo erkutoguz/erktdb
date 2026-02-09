@@ -1,5 +1,8 @@
 #include "../../include/common/net.h"
 
+#include <asm-generic/errno.h>
+#include <unistd.h>
+
 void serialize_pubhdr(const struct pubhdr *h, i8 *buf) {
 	int offset = 0;
 	buf[offset++] = (h->magic >> 8) & 0xff;
@@ -181,6 +184,11 @@ sfd connect_to_host(char *hostname, char *port) {
 	struct addrinfo hints, *addr, *p;
 	sfd hostfd;
 	int stat;
+
+	struct timeval timeout;
+	timeout.tv_sec = 3;
+	timeout.tv_usec = 0;
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
@@ -196,12 +204,48 @@ sfd connect_to_host(char *hostname, char *port) {
 			continue;
 		}
 
-		if (connect(hostfd, p->ai_addr, p->ai_addrlen) == -1) {
-			perror("connect2host connect");
-			close(hostfd);
-			continue;
-		}
+		int flags = set_nonblocking(hostfd);
+		int res = connect(hostfd, p->ai_addr, p->ai_addrlen);
 
+		if (res < 0) {
+			if (errno == EINPROGRESS) {
+				// conn started
+				fd_set myset;
+				FD_ZERO(&myset);
+				FD_SET(hostfd, &myset);
+
+				// kinda same logic with epoll
+				res = select(hostfd + 1, NULL, &myset, NULL, &timeout);
+
+				if (res < 0 && errno != EINTR) {
+					perror("netc: select");
+					close(hostfd);
+					continue;
+				} else if (res > 0) {
+					int valopt;
+					socklen_t lon = sizeof(int);
+					if (getsockopt(hostfd, SOL_SOCKET, SO_ERROR, (void *)(&valopt), &lon) < 0) {
+						perror("netc: getsockopt");
+						close(hostfd);
+						continue;
+					}
+					if (valopt) {
+						// conn error
+						close(hostfd);
+						continue;
+					}
+				} else {
+					fprintf(stderr, "worker conn: timeout\n");
+					close(hostfd);
+					continue;
+				}
+			} else {
+				perror("netc error");
+				close(hostfd);
+				continue;
+			}
+		}
+		fcntl(hostfd, F_SETFL, flags);
 		break;
 	}
 	if (p == NULL) {
@@ -251,6 +295,24 @@ STAT send_all(sfd to, i8 *src, i64 size) {
 				continue;
 			}
 			perror("sendall");
+			return FAIL;
+		}
+		tot_sent += sent;
+	}
+	return OK;
+}
+
+STAT send_err_msg(sfd to, i8 *msg, i32 size) {
+	i32 tot_sent = 0;
+	i32 sent;
+	while (tot_sent < size) {
+		sent = send(to, msg + tot_sent, size - tot_sent, 0);
+		if (sent == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				usleep(1000);
+				continue;
+			}
+			perror("senderrmsg");
 			return FAIL;
 		}
 		tot_sent += sent;

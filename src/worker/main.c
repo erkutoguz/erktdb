@@ -1,8 +1,18 @@
+#include <signal.h>
+
 #include "../../include/common/connection.h"
 #include "../../include/common/net.h"
 #include "../../include/worker/master_request_handler.h"
+#include "../../include/worker/storage.h"
+
+void handle_sigint(int sig) {
+	printf("\nworker shutdown\n");
+	save("erkt.db");
+	exit(0);
+}
 
 int main() {
+	signal(SIGINT, handle_sigint);
 	struct epoll_event events[MAXEVENTS], ev;
 	struct sockaddr incomaddr;
 
@@ -11,8 +21,8 @@ int main() {
 
 	char incomip[16];
 
+	load("erkt.db");
 	sfd listener = start_listen(WORKERPORT);
-
 	if (set_nonblocking(listener) == FAIL) {
 		perror("setnonblock");
 		exit(EXIT_FAILURE);

@@ -9,10 +9,10 @@ void handle_master_message(sfd fd) {
 	if (!conn) return;
 
 	conn->type = CONN_WOR;
-	conn->expected_hdr_size = sizeof(struct prihdr);
+	conn->expected_hdr_size = PRIHDR_SIZE;
 
 	if (conn->state == CONN_WAIT_HEADER) {
-		i32 toread = conn->expected_hdr_size - conn->header_bytes_read;
+		i32 toread = PRIHDR_SIZE - conn->header_bytes_read;
 		i32 n = recv(fd, conn->header_buf + conn->header_bytes_read, toread, 0);
 
 		if (n <= 0) {
@@ -64,7 +64,7 @@ void handle_master_message(sfd fd) {
 			struct rethdr hdr;
 			hdr.uuid = conn->info.master_req.uuid;
 			hdr.client_fd = conn->info.master_req.client_fd;
-			i8 buf[20];
+			i8 buf[RETHDR_SIZE];
 
 			if (conn->info.master_req.pub.op == OP_GET) {
 				char *val_found = get(key_str);
@@ -73,14 +73,14 @@ void handle_master_message(sfd fd) {
 					hdr.status = OK;
 					hdr.msglen = strlen(val_found);
 					serialize_rethdr(&hdr, buf);
-					send_hdr(fd, buf, 20);
+					send_hdr(fd, buf, RETHDR_SIZE);
 
 					send_all(fd, (i8 *)val_found, hdr.msglen);
 				} else {
 					hdr.status = FAIL;
 					hdr.msglen = 0;
 					serialize_rethdr(&hdr, buf);
-					send_hdr(fd, buf, 20);
+					send_hdr(fd, buf, RETHDR_SIZE);
 				}
 			}
 
@@ -95,7 +95,17 @@ void handle_master_message(sfd fd) {
 				hdr.msglen = 0;
 
 				serialize_rethdr(&hdr, buf);
-				send_hdr(fd, buf, 20);
+				send_hdr(fd, buf, RETHDR_SIZE);
+			}
+
+			if (conn->info.master_req.pub.op == OP_DEL) {
+				del(key_str);
+
+				hdr.status = OK;
+				hdr.msglen = 0;
+
+				serialize_rethdr(&hdr, buf);
+				send_hdr(fd, buf, RETHDR_SIZE);
 			}
 
 			free(key_str);

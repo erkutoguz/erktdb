@@ -7,7 +7,7 @@ int main() {
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(NULL, "1911", &hints, &addr);
+	getaddrinfo(NULL, "45419", &hints, &addr);
 
 	int fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
@@ -39,7 +39,8 @@ int main() {
 
 	int n = recv(fd, response_buf, sizeof(response_buf), 0);
 	if (n > 0) {
-		printf("Cevap geldi!\n");
+		response_buf[n] = '\0';
+		printf("Cevap geldi! %s\n", response_buf);
 	}
 	freeaddrinfo(addr);
 	return 0;

@@ -11,9 +11,9 @@ void handle_client_message(sfd client_fd) {
 
 	if (conn->state == CONN_WAIT_HEADER) {
 		conn->type = CONN_CLI;
-		conn->expected_hdr_size = sizeof(struct pubhdr);
+		conn->expected_hdr_size = PUBHDR_SIZE;
 
-		i32 toread = conn->expected_hdr_size - conn->header_bytes_read;
+		i32 toread = PUBHDR_SIZE - conn->header_bytes_read;
 		i32 n = recv(client_fd, conn->header_buf + conn->header_bytes_read, toread, 0);
 
 		if (n <= 0) {
@@ -55,19 +55,17 @@ void handle_client_message(sfd client_fd) {
 
 			if (!w || w->sockfd == -1) {
 				fprintf(stderr, "noworker.\n");
+				send_err_msg(client_fd, "SERV_ERR", 8);
 				free_connection(client_fd);
-				free(k);
 				return;
 			}
-			free(k);
-
 			struct pay p;
 			p.key = conn->bodybuf;
 			p.val = conn->bodybuf + conn->info.client_req.keylen;
 
 			printf("data completely taken. key: %s -> related worker: %d\n", (char *)p.key, w->sockfd);
 
-			i8 buf[24];
+			i8 buf[PRIHDR_SIZE];
 			struct prihdr pri;
 			pri.pub = conn->info.client_req;
 			pri.uuid = uuid++;
@@ -75,7 +73,30 @@ void handle_client_message(sfd client_fd) {
 
 			serialize_prihdr(&pri, buf);
 
-			send_hdr(w->sockfd, buf, 24);
+			if (send_hdr(w->sockfd, buf, PRIHDR_SIZE) == FAIL) {
+				w->is_connected = 0;
+				close(w->sockfd);
+				w->sockfd = -1;
+
+				struct worker *backupw = get_target_worker(p.key);
+				if (!backupw || backupw == w) {
+					free_connection(client_fd);
+					return;
+				}
+
+				if (send_hdr(backupw->sockfd, buf, PRIHDR_SIZE) == FAIL) {
+					free_connection(client_fd);
+					return;
+				}
+
+				send_pay(backupw->sockfd, &p, conn->info.client_req.keylen, conn->info.client_req.vallen);
+				if (conn->bodybuf) {
+					free(conn->bodybuf);
+					conn->bodybuf = NULL;
+				}
+				return;
+			}
+
 			send_pay(w->sockfd, &p, conn->info.client_req.keylen, conn->info.client_req.vallen);
 
 			if (conn->bodybuf) {
@@ -93,17 +114,18 @@ void handle_worker_message(sfd worker_fd) {
 
 	if (conn->state == CONN_WAIT_HEADER) {
 		conn->type = CONN_WOR;
-		conn->expected_hdr_size = sizeof(struct rethdr);
+		conn->expected_hdr_size = RETHDR_SIZE;
 
-		i32 toread = conn->expected_hdr_size - conn->header_bytes_read;
+		i32 toread = RETHDR_SIZE - conn->header_bytes_read;
 		i32 n = recv(worker_fd, conn->header_buf + conn->header_bytes_read, toread, 0);
 
 		if (n <= 0) {
 			if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
 			perror("worker2master recv header");
-
+			clear_worker(worker_fd);
 			// worker öldü -> yeniden bğala ya da sil
 			free_connection(worker_fd);
+
 			return;
 		}
 		conn->header_bytes_read += n;

@@ -3,8 +3,12 @@
 
 #include "types.h"
 
-enum OP { OP_GET = 0x0, OP_POST = 0x1 };
-typedef enum { OK = 0, FAIL = -1 } STAT;
+#define PUBHDR_SIZE 12
+#define PRIHDR_SIZE 24
+#define RETHDR_SIZE 20
+
+enum OP { OP_GET = 0x0, OP_POST = 0x1, OP_DEL = 0x2 };
+typedef enum { OK = 0, FAIL = -1, SERV_ERR = 1 } STAT;
 
 struct pubhdr {
 	i16 magic;	 // 2
