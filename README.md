@@ -12,6 +12,42 @@ This project is designed for learning purposes. It works correctly for the scena
 
 ---
 
+## 🔧 Custom Binary Protocol
+I didn't use slow text-based protocols like JSON or HTTP. Instead, I designed a **Custom Binary Protocol** to make communication as fast as possible.
+Everything is sent as raw bytes using `packed` structs. This means there is **zero parsing overhead**.
+Here is the exact structure I used in C:
+
+```c
+// 1. Public Header (12 Bytes)
+// Every packet starts with this.
+struct pubhdr {
+    i16 magic;       // 2 bytes (To verify protocol integrity)
+    enum OP op : 8;  // 1 byte  (Operation: GET, POST, DEL, SYNC)
+    i8 pad;          // 1 byte  (Padding for alignment)
+    i32 keylen;      // 4 bytes (Length of the Key)
+    i32 vallen;      // 4 bytes (Length of the Value)
+};
+
+// 2. Private Header (25 Bytes)
+// Used internally between Master and Workers.
+// I used __attribute__((packed)) to prevent memory padding!
+struct prihdr {
+    struct pubhdr pub;  // 12 bytes (Includes public header)
+    i32 client_fd;      // 4 bytes  (To route response back to client)
+    i64 uuid;           // 8 bytes  (Unique Request ID)
+    i8 flag;            // 1 byte   (0: Primary Write, 1: Replica Write)
+} __attribute__((packed));
+
+// 3. Response Header (20 Bytes)
+// Sent back to the client.
+struct rethdr {
+    i64 uuid;       // 8 bytes
+    sfd client_fd;  // 4 bytes
+    i32 msglen;     // 4 bytes (Length of the response message)
+    STAT status;    // 4 bytes (OK, FAIL, SERV_ERR)
+} __attribute__((packed));
+```
+
 ## Architecture
 
 I used a **Master-Worker** architecture with a **Ring Topology**.
