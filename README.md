@@ -46,7 +46,7 @@ ID must start from 0 and go sequentially (0, 1, 2...).
 PORT is where the worker listens.
 
 # Open separate terminals for each worker:
-```
+```bash
 ./worker 0 8081
 ./worker 1 8082
 ./worker 2 8083
@@ -55,14 +55,12 @@ PORT is where the worker listens.
 ### 3. Run the Master Node
 The master will automatically find the workers (configured in common.h).
 
-```
-Bash
+```bash
 ./master_node
 ```
 ### 4. Run the Client
 The client connects to the master and lets you send commands.
 
-```
-Bash
+```bash
 ./client
 ```
