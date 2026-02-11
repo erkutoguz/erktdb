@@ -19,85 +19,91 @@
 
 #define MAXEVENTS 128
 #define MAXCONN 1024
-#define WORKERPORT "1999"
-#define MASTERPORT "45419"
+
+#define MASTERPORT "19119"
+#define WORKERCOUNT 3
+
+extern char* wips[];
+extern char* wports[];
 
 /**
  * serialize pubhdr struct to buf
  */
-void serialize_pubhdr(const struct pubhdr *h, i8 *buf);
+void serialize_pubhdr(const struct pubhdr* h, i8* buf);
 
 /**
  * deserialize buf to pubhdr struct
  */
-void deserialize_pubhdr(struct pubhdr *h, const i8 *buf);
+void deserialize_pubhdr(struct pubhdr* h, const i8* buf);
 
 /**
  * serialize prihdr struct to buf
  */
-void serialize_prihdr(const struct prihdr *h, i8 *buf);
+void serialize_prihdr(const struct prihdr* h, i8* buf);
 
 /**
  * deserialize buf to prihdr struct
  */
-void deserialize_prihdr(struct prihdr *h, const i8 *buf);
+void deserialize_prihdr(struct prihdr* h, const i8* buf);
 
 /**
  * serialize pay struct to buf
  */
-void serialize_pay(const struct pay *p, i8 *buf, i32 keylen, i32 vallen);
+void serialize_pay(const struct pay* p, i8* buf, i32 keylen, i32 vallen);
 
 /**
  * deserialize buf to pay struct
  */
-void deserialize_pay(struct pay *p, const i8 *buf, i32 keylen, i32 vallen);
+void deserialize_pay(struct pay* p, const i8* buf, i32 keylen, i32 vallen);
 
-void serialize_rethdr(const struct rethdr *h, i8 *buf);
+void serialize_rethdr(const struct rethdr* h, i8* buf);
 
-void deserialize_rethdr(struct rethdr *h, const i8 *buf);
+void deserialize_rethdr(struct rethdr* h, const i8* buf);
 
 /**
  * accept port parameter return listener fd
  */
-sfd start_listen(char *port);
+sfd start_listen(char* port);
 
 /**
- * accept connection coming from listener socket and fill sokcaddr with incoming request data
- * return incoming connection sockfd
+ * accept connection coming from listener socket and fill sokcaddr with incoming
+ * request data return incoming connection sockfd
  */
-sfd accept_conn(int listener, struct sockaddr *addr);
+sfd accept_conn(int listener, struct sockaddr* addr);
 
 /**
  * master -> worker connection & worker -> master connection
  * returns sockfd
  */
-sfd connect_to_host(char *hostname, char *port);
+sfd connect_to_host(char* hostname, char* port);
+
+sfd worker2worker(char* hostname, char* port);
 
 /**
  * send i8 *buff to dest
  * return type status to check if it is success
  */
-STAT send_hdr(sfd dest, i8 *buf, i16 size);
+STAT send_hdr(sfd dest, i8* buf, i16 size);
 
 /**
  * send payload struct to dest sock
  * pass pay* to send
  * return type status to check if it is success
  */
-STAT send_pay(sfd dest, struct pay *pay, i32 keylen, i32 vallen);
+STAT send_pay(sfd dest, struct pay* pay, i32 keylen, i32 vallen);
 /**
  * accept to sfd, i8* buffer and total size in bytes
  * returns OK if it is success
  */
-STAT send_all(sfd to, i8 *src, i64 size);
+STAT send_all(sfd to, i8* src, i64 size);
 
-STAT send_err_msg(sfd to, i8 *msg, i32 size);
+STAT send_err_msg(sfd to, i8* msg, i32 size);
 
 /**
  * accept from sfd, and dest buffer in i8* type and total size in bytes
  * returns OK if it is success
  */
-STAT recv_all(sfd from, i8 *dest, i64 size);
+STAT recv_all(sfd from, i8* dest, i64 size);
 
 /**
  * sets fd to nonblocking
@@ -107,6 +113,6 @@ int set_nonblocking(sfd sock);
 /**
  * add connected socket to epoll list
  */
-STAT add_epoll(sfd epollfd, sfd connfd, struct epoll_event *ev);
+STAT add_epoll(sfd epollfd, sfd connfd, struct epoll_event* ev);
 
 #endif

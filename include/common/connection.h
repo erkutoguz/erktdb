@@ -10,23 +10,23 @@ typedef enum { CONN_WAIT_HEADER, CONN_WAIT_PAYLOAD, CONN_IDLE } conn_state;
 typedef enum { CONN_CLI, CONN_WOR } conn_type;
 
 struct connection {
-	sfd fd;
-	conn_type type;
-	conn_state state;
+  sfd fd;
+  conn_type type;
+  conn_state state;
 
-	i8 header_buf[sizeof(struct prihdr)];
-	i32 header_bytes_read;
-	i32 expected_hdr_size;
+  i8 header_buf[sizeof(struct prihdr)];
+  i32 header_bytes_read;
+  i32 expected_hdr_size;
 
-	union {
-		struct pubhdr client_req;  // 12 cli -> master
-		struct prihdr master_req;  // 24 master -> worker
-		struct rethdr worker_res;  // 20 worker -> master
-	} info;
+  union {
+    struct pubhdr client_req;  // 12 cli -> master
+    struct prihdr master_req;  // 24 master -> worker
+    struct rethdr worker_res;  // 20 worker -> master
+  } info;
 
-	i8* bodybuf;
-	i32 body_bytes_read;
-	i32 body_size;
+  i8* bodybuf;
+  i32 body_bytes_read;
+  i32 body_size;
 };
 
 void init_connections();
