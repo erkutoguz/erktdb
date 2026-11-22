@@ -1,102 +1,54 @@
-# Distri-DB: Distributed Key-Value Store in C
+# ErktDB
 
-Hey,
+A key-value store written from scratch in C, as a learning project. A master node routes client requests to a ring of worker nodes over a custom binary protocol on TCP. No frameworks, no HTTP, no JSON: only Linux system calls, sockets and `epoll`.
 
-**Distri-DB** is a distributed key-value store that I built from scratch using **C**.
-I didn't use any high-level frameworks or libraries (like HTTP or JSON) because I wanted to understand how distributed systems actually work under the hood. I implemented everything using **Linux System Calls**, **TCP Sockets**, and **Epoll**.
+## What it does
 
-It supports **Replication**, **Fault Tolerance**, and **Automatic Recovery**.
+- **Non-blocking I/O:** the master and every worker run a single-threaded `epoll` loop. Each connection has a small state machine (waiting for header → waiting for payload) so partial reads are handled.
+- **Custom binary protocol:** fixed-size headers followed by the raw key and value bytes. Header fields are serialized by hand in big-endian (network byte order) by the `serialize_*` / `deserialize_*` functions in `src/common/net.c`.
+- **Routing:** the master hashes the key (djb2) modulo the number of workers to pick the target worker.
+- **Storage:** each worker keeps an in-memory hash map with separate chaining (4096 buckets), plus a second map that holds the backup copy of its predecessor's data.
+- **Replication:** after a successful `POST` or `DEL`, a worker forwards the same request to the next worker in the ring, which stores it in its backup map. Replication is asynchronous: the client's response does not wait for the backup.
+- **Persistence:** on `CTRL+C` a worker writes its primary map to `<port>.db` and its backup map to `<predecessor-port>.db.bc`, and loads both on startup.
 
-### Note:
-This project is designed for learning purposes. It works correctly for the scenarios I tested, I know it's not much but I learned a lot.
+## Protocol
 
----
+| Header | Size | Fields |
+|---|---|---|
+| Public (client → master) | 12 bytes | magic (2), op (1), padding (1), key length (4), value length (4) |
+| Private (master ↔ worker, worker → backup) | 25 bytes | public header (12), client fd (4), request id (8), flag (1: 0 = primary, 1 = backup) |
+| Response (worker → master) | 20 bytes | request id (8), client fd (4), message length (4), status (4) |
 
-## 🔧 Custom Binary Protocol
-I didn't use slow text-based protocols like JSON or HTTP. Instead, I designed a **Custom Binary Protocol** to make communication as fast as possible.
-Everything is sent as raw bytes using `packed` structs. This means there is **zero parsing overhead**.
-Here is the exact structure I used in C:
+Operations: `GET`, `POST`, `DEL`, plus an internal `SYNC_START`.
 
-```c
-// 1. Public Header (12 Bytes)
-// Every packet starts with this.
-struct pubhdr {
-    i16 magic;       // 2 bytes (To verify protocol integrity)
-    enum OP op : 8;  // 1 byte  (Operation: GET, POST, DEL, SYNC)
-    i8 pad;          // 1 byte  (Padding for alignment)
-    i32 keylen;      // 4 bytes (Length of the Key)
-    i32 vallen;      // 4 bytes (Length of the Value)
-};
+## Known limitations
 
-// 2. Private Header (25 Bytes)
-// Used internally between Master and Workers.
-// I used __attribute__((packed)) to prevent memory padding!
-struct prihdr {
-    struct pubhdr pub;  // 12 bytes (Includes public header)
-    i32 client_fd;      // 4 bytes  (To route response back to client)
-    i64 uuid;           // 8 bytes  (Unique Request ID)
-    i8 flag;            // 1 byte   (0: Primary Write, 1: Replica Write)
-} __attribute__((packed));
+- Fixed configuration: three workers on `127.0.0.1:8081–8083` and the master on port `19119` (`include/common/net.h`, `src/common/net.c`).
+- The master connects to the workers only at startup; there is no heartbeat and no reconnection.
+- Worker failure handling is incomplete and untested; do not rely on it.
+- Asynchronous replication means a write acknowledged by the primary can be lost if the primary dies before the backup receives it.
+- The `magic` field is not validated yet.
+- The test client sends a single hard-coded `GET` request.
 
-// 3. Response Header (20 Bytes)
-// Sent back to the client.
-struct rethdr {
-    i64 uuid;       // 8 bytes
-    sfd client_fd;  // 4 bytes
-    i32 msglen;     // 4 bytes (Length of the response message)
-    STAT status;    // 4 bytes (OK, FAIL, SERV_ERR)
-} __attribute__((packed));
-```
+## Build and run
 
-## Architecture
-
-I used a **Master-Worker** architecture with a **Ring Topology**.
-
-* **Master Node:** It manages the connections and redirects clients to the correct worker. It also detects if a worker is offline.
-* **Worker Nodes:** They store the data in memory. Each worker is a **Primary** for its own data and a **Backup** for the previous worker in the ring.
-* **Protocol:** I wrote my own custom **Binary Protocol**. It is much faster than text-based protocols.
-
-## Features
-
-* **Custom Binary Protocol:** No overhead, just raw bytes.
-* **Non-Blocking I/O:** Uses `epoll` to handle multiple connections at the same time.
-* **Replication:** When you write data to a worker, it automatically sends a backup copy to the next worker.
-* **Failover:** If a worker crashes, the system doesn't stop. The Master redirects traffic to the backup.
-* **Recovery (Self-Healing):** When a crashed worker comes back online, it automatically asks for its data from the backup and syncs itself.
-* **Persistence:** It saves data to `.db` files when you stop it with `CTRL+C`.
-
----
-
-##  Usage
-
-### 1. Build the Project
-You need `gcc` and `make`.
+Requires Linux, `gcc` and `make`.
 
 ```bash
 make
 ```
 
-### 2. Run the Workers (Start these first)
-You need to start workers before the master.
-ID must start from 0 and go sequentially (0, 1, 2...).
-PORT is where the worker listens.
+Start the three workers in separate terminals, within a few seconds of each other (each worker retries connecting to its successor three times, two seconds apart):
 
-# Open separate terminals for each worker:
 ```bash
-./worker 0 8081
-./worker 1 8082
-./worker 2 8083
+./worker_node 0 8081
+./worker_node 1 8082
+./worker_node 2 8083
 ```
 
-### 3. Run the Master Node
-The master will automatically find the workers (configured in common.h).
+Then start the master and the test client:
 
 ```bash
 ./master_node
-```
-### 4. Run the Client
-The client connects to the master and lets you send commands.
-
-```bash
-./client
+./client_app
 ```
